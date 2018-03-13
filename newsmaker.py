@@ -9,24 +9,7 @@ from bs4 import BeautifulSoup
 import urllib
 import difflib
 
-def checkLines(l1, l2):
-    """Rubbish"""
-    if len(l1) == len(l2):
-        errors = []
-        for i in range(l1):
-            if l1[i] != l2[i]:
-                errors.append((i, l1[i], l2[i]))
-        if errors == []:
-            print("Equal!")
-        else:
-            for err in errors:
-                print("Line ", err[0], ":\nWas: ", err[1], "\nNow: ", err[2], sep='')
-    if len(l2) > len(l1):
-        errors = []
-        for i in range(l1):
-            if l1[i] not in l2:
-                asd
-                
+               
                 
 def compareStr(str1, str2):
     list1 = str1.splitlines()
@@ -336,3 +319,176 @@ def diffL(text1, text2):
         if letter[0] != ' ' and letter[0] != '?':
             print(i,':', letter)
             i -= 1
+
+def checkPage(url, prev="prev.html"):
+    bs1 = cookSoup(url)
+    bs2 = BeautifulSoup(open(prev, "r").read(), "lxml")
+    for tag in bs2.findAll("span", attrs={'class':'newsmaker'}):
+        tag.replaceWithChildren()
+    tag1 = findText(bs1)
+    tag2 = findText(bs2)
+    text1 = tag1.__str__()
+    text2 = tag2.__str__()
+    text = diffA(text2, text1)
+    newtag = BeautifulSoup(text, "lxml")
+    newtag = newtag.contents[0].contents[0].contents[0]
+    findText(bs1).replaceWith(newtag)
+    savetag(bs1, "prev.html", True)
+    
+def diffA(text1, text2):
+    text = ''
+    d = difflib.Differ()
+    result = list(d.compare(text1, text2))
+    i = 0
+    line = ''
+    sign = ' '
+    for char in result:
+        if sign == ' ':
+            if char[0] == ' ':
+                text += char[2]
+            elif char[0] == '+':
+                text += "<span style=\"background-color: #B4EBA2\" title=\"Added text\" class=\"newsmaker\">"
+                text += char[2]
+                sign = '+'
+            elif char[0] == '-':
+                text += "<span style=\"background-color: #EBA2A9\" title=\"Deleted text\" class=\"newsmaker\">"
+                text += char[2]
+                sign = '-'
+        elif sign == '+':
+            if char[0] == ' ':
+                text += "</span>"
+                text += char[2]
+                sign = ' '
+            elif char[0] == '+':
+                text += char[2]
+            elif char[0] == '-':
+                text += "</span>"
+                text += "<span style=\"background-color: #EBA2A9\" title=\"Deleted text\" class=\"newsmaker\">"
+                text += char[2]
+                sign = '-'
+        elif sign == '-':
+            if char[0] == ' ':
+                text += "</span>"
+                text += char[2]
+                sign = ' '
+            elif char[0] == '+':
+                text += "</span>"
+                text += "<span style=\"background-color: #B4EBA2\" title=\"Added text\" class=\"newsmaker\">"
+                text += char[2]
+                sign = '+'
+            elif char[0] == '-':
+                text += char[2]
+    return text
+def savetag(tag, name='tag', overwrite=False):
+    if overwrite == False:
+        num = 0
+        while name+num.__str__()+'.html' in os.listdir():
+            num += 1
+        file = open(name+num.__str__()+'.html', "w")
+        file.write(tag.__str__())
+    else:
+        file = open(name, "w")
+        file.write(tag.__str__())
+    
+def diffL(text1, text2):
+    d = difflib.Differ()
+    result = list(d.compare(text1, text2))
+    i = 0
+    for letter in result:
+        i += 1
+        if letter[0] != ' ' and letter[0] != '?':
+            print(i,':', letter)
+            i -= 1
+
+def checkNews(config='config'):
+    for line in open(config, 'r').readlines():
+        name = (urllib.parse.urlparse(line).netloc+urllib.parse.urlparse(line).path).replace('.', '_').replace('/', '-').replace('\n', '')
+        if not os.path.exists(name):
+            os.makedirs(name)
+            print("Directory created: ", name, sep='')
+        lst = os.listdir(name)
+        lst.sort()
+        now = datetime.datetime.now()
+        now = now.year.__str__()+'-'+now.month.__str__()+'-'+now.day.__str__()+'-'+now.hour.__str__()+'-'+now.minute.__str__()+'-'+now.second.__str__()
+        if len(lst) < 5:
+            if len(lst) != 0:
+                try:
+                    checkPage(line, name+'/'+lst[len(lst)-1], name+'/'+now+'.html')
+                except Exception as err:
+                    print(err)
+                    print("Can't check!")
+                    continue
+            else:
+                try:
+                    checkPage(line, 'temp', name+'/'+now+'.html')
+                except Exception as err:
+                    print(err)
+                    print("Can't check!")
+                    continue
+        else:
+            os.remove(name+'/'+lst[0])
+            try:
+                checkPage(line, name+'/'+lst[len(lst)-1]+'.html', name+'/'+now+'.html')
+            except Exception as err:
+                print(err)
+                print("Can't check!")
+                continue
+        print("Page saved as ", name+now, sep='')
+        
+def findText(bs):
+    par = set()
+    l = []
+    for tag in bs.findAll({'p', 'br', 'hr', re.compile("h[1-6]")}):
+        par.add(tag.parent)
+    for tag in par:
+        br = len(tag.findChildren("br", recursive=False))
+        p = len(tag.findChildren("p",  recursive=False))
+        hr = len(tag.findChildren("hr", recursive=False))
+        hs = len(tag.findChildren(re.compile("h[1-6]"), recursive=False))
+        l.append((tag, br+p+hr+hs))
+        #print(tag.name, br, p, hr, hs)
+    max = 0
+    _i = 0
+    for i in range(len(l)):
+        if l[i][1] > max:
+            max = l[i][1]
+            _i = i
+    return l[_i][0]
+def checkPage(url, prev="prev.html", new="prev.html"):
+    bs1 = cookSoup(url)
+    print("prev = ", prev, sep='')
+    print("new = ", new, sep='')
+    print(os.path.isfile(prev))
+    if os.path.isfile(prev):
+        bs2 = BeautifulSoup(open(prev, "r").read(), "lxml")
+        for tag in bs2.findAll("span", attrs={'class':'newsmaker'}):
+            tag.replaceWithChildren()
+        tag1 = findText(bs1)
+        tag2 = findText(bs2)
+        text1 = tag1.__str__()
+        text2 = tag2.__str__()
+        text = diffA(text2, text1)
+        newtag = BeautifulSoup(text, "lxml")
+        newtag = newtag.contents[0].contents[0].contents[0]
+        findText(bs1).replaceWith(newtag)
+    savetag(bs1, new, True)
+def urlNorm(url):
+    url = urllib.parse.urlsplit(url)
+    url = list(url)
+    url[2] = urllib.parse.quote(url[2])
+    url = urllib.parse.urlunsplit(url)
+    print(url)
+    return url
+def cookSoup(url):
+    url = urlNorm(url)
+    i = 0
+    while i<3:
+        try:
+            html = urlopen(url)
+            code = html.read().decode()
+            bs = BeautifulSoup(code, "lxml")
+            return bs
+        except:
+            print("Can't load ", url, sep='')
+            i += 1
+    raise Exception
