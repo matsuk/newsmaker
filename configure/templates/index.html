@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<script>
+
+function loadList() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            var count;
+            var str = this.responseText;
+            console.log(str);
+            count = str.substring(0, str.indexOf(","));
+            str = str.substring(str.indexOf(",")+1);
+            console.log("count = " + count);
+            for (var i = 1; i <= count; i++) {
+                var opt = document.createElement("option");
+                var sub = str.substring(0, str.indexOf(":"));
+                opt.setAttribute("id", str.substring(str.indexOf(":")+1,str.indexOf(",")));
+                str = str.substring(str.indexOf(",")+1);
+                opt.innerHTML = sub;
+                document.getElementById("list").appendChild(opt);
+            }
+        }
+    };
+    xhttp.open("GET", "objects", true);
+    xhttp.send(null);
+}
+
+window.onload = loadList();
+
+function loadFile(s) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("txt").innerHTML = this.responseText;
+        }
+    };
+    xhttp.open("GET", "index.html?object=" + s[s.selectedIndex].id, true);
+    xhttp.send(null);
+}
+
+function changeColor(s) {
+    var flag = s.checked;
+    if (flag == false) {
+        s.parentNode.parentNode.style.backgroundColor="#BEBEBE";
+        s.parentNode.parentNode.setAttribute("class", "st1");
+    } else {
+        s.parentNode.parentNode.style.backgroundColor="#6fbe3b";
+        s.parentNode.parentNode.setAttribute("class", "st2"); 
+    }
+}
+
+function closeForm() {
+    document.getElementById('id01').style.display='none';
+    var fields = document.getElementsByClassName("input");
+    for (var i = 0; i < fields.length; i++) {
+        fields[i].value = "";
+    }
+    var cboxes = document.getElementsByClassName("st2");
+    for (var i = cboxes.length-1; i >= 0; i--) {
+        cboxes[i].getElementsByTagName("input")[0].checked = false;
+        cboxes[i].style.backgroundColor="#BEBEBE";
+        cboxes[i].setAttribute("class", "st1");
+    }
+    document.getElementById("hist").value = 2;
+}
+
+function createObj() {
+    
+    document.getElementById('id01').style.display='none';
+    var url = document.getElementById("url").value;
+    var uname = document.getElementById("name").value;
+    var emails = document.getElementById("emails").value;
+    var cb = document.getElementsByClassName("st2");
+    var schedule = "";
+    for (var i = 0; i < cb.length; i++) {
+        schedule += cb[i].getElementsByClassName("plabel")[0].innerHTML + " "
+    }
+    schedule = schedule.substring(0, schedule.length - 1);
+    schedule += ", "
+    schedule += document.getElementById("time-selector").value;
+    var hist = document.getElementById("hist").value;
+    var fields = document.getElementsByClassName("input");
+    for (var i = 0; i < fields.length; i++) {
+        fields[i].value = "";
+    }
+    var cboxes = document.getElementsByClassName("st2");
+    for (var i = cboxes.length-1; i >= 0; i--) {
+        cboxes[i].getElementsByTagName("input")[0].checked = false;
+        cboxes[i].style.backgroundColor="#BEBEBE";
+        cboxes[i].setAttribute("class", "st1");
+    }
+    document.getElementById("hist").value = 2;
+    console.log("clear"); 
+    var xhttp = new XMLHttpRequest(); 
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) { 
+            var count = 0;
+            var lst = document.getElementById("list");
+            var flag = true;
+            while (flag == true) {
+                count++;
+                flag = false;
+                for (var i = 0; i < lst.length; i++) {
+                    if ("object"+count == lst[i].id) {
+                        flag = true;
+                    }
+                }
+            }
+            var opt = document.createElement("option");
+            opt.setAttribute("id", "object"+count);
+            opt.innerHTML = uname;
+            document.getElementById("list").appendChild(opt);
+        }
+    };
+    xhttp.open("POST", "objects", true);
+    xhttp.send(url+"|"+uname+"|"+emails+"|"+schedule+"|"+hist);
+}
+
+function delElem() {
+    var opt = document.getElementById("list")[document.getElementById("list").selectedIndex];
+    document.getElementById("list").removeChild(opt);
+    document.getElementById("txt").innerHTML = "";
+    var xhttp = new XMLHttpRequest(); 
+    /*
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+
+        }
+    };
+    */
+    xhttp.open("POST", "objects?del="+opt.id, true);
+    xhttp.send(null);
+}
+
+
+</script>
+
+    <head>
+        <!--<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styleobj.css') }}" />-->
+        <link rel="stylesheet" type="text/css" href="static/css/styleobj.css" />
+    </head>
+    <body>
+        <div id="demo">
+            <h2>Configuration</h2>
+            <div id="navig">
+                <div id="listd">
+                    <select id="list" onchange="loadFile(this)" multiple size="8">
+                    </select>
+                </div>
+                <div id="txt" rows="8" cols="45"></div>
+            </div>
+            <div id="actions">
+                <button id="add" onclick="document.getElementById('id01').style.display='block'">Add</button>
+                <button id="del" onclick="delElem()">Del</button>
+            </div>
+        </div>
+        <div id="id01" class="modal">    
+            <form class="modal-content">
+                <div class="container">
+                    <h3>Add page object</h3>
+                    <div class="actDiv">
+                        <label>
+                            <div>URL</div>
+                            <input id="url" class="input" placeholder="http://www.example.com/" class="line">
+                        </label>
+                    </div>  
+                    <div class="actDiv">
+                        <label>
+                            <div>Name</div>
+                            <input id="name" class="input" placeholder="Page name" class="line">
+                        </label>
+                    </div>
+                    <div class="actDiv">
+                        <label>
+                            <div>Emails</div>
+                            <textarea id="emails" class="input" placeholder="example@example.com" class="emails"></textarea>
+                        </label>
+                    </div>
+                    <div class="actDiv">
+                        <div>Schedule</div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk1" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Mon</span></div>
+                            </label>
+                        </div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk2" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Tue</span></div>
+                            </label>
+                        </div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk3" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Wed</span></div>
+                            </label>
+                        </div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk4" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Thu</span></div>
+                            </label>
+                        </div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk5" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Fri</span></div>
+                            </label>
+                        </div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk6" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Sat</span></div>
+                            </label>
+                        </div>
+                        <div id="ck-button" class="st1">
+                            <label>
+                                <input id="chk7" type="checkbox" value="1" onchange="changeColor(this)">
+                                <div class="dv"><span class="plabel">Sun</span></div>
+                            </label>
+                        </div>
+                        <div id="times">
+                            <input type="time" id="time-selector" class="input" placeholder="hh:mm">
+                        </div>
+                    </div> 
+                    <br>
+                    <div class="actDiv">
+                        <div>History length</div>
+                        <select id="hist">
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                            <option>6</option>
+                            <option>7</option>
+                            <option>8</option>
+                            <option>9</option>
+                            <option>10</option>
+                            <option>11</option>
+                            <option>12</option>
+                        </select>
+                    </div>
+                    <div class="clearfix">
+                        <button type="button" onclick="closeForm()" class="cancelbtn">Cancel</button>
+                        <button type="button" onclick="createObj()" class="createbtn">Create object</button>
+                    </div>
+                </div>
+                <div id="sp">
+                    <span onclick="closeForm()" class="close" title="Close Modal">&times;</span>
+                </div>
+            </form>
+        </div>
+    </body>
+<script>
+// Get the modal
+var modal = document.getElementById('id01');
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    if (event.target == modal) {
+        closeForm();
+    }
+}
+</script>
+
+</html>
