@@ -26,7 +26,32 @@ function loadList() {
     xhttp.send(null);
 }
 
+function loadGroups() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            var count;
+            var str = this.responseText;
+            console.log(str);
+            count = str.substring(0, str.indexOf(","));
+            str = str.substring(str.indexOf(",")+1);
+            console.log("count = " + count);
+            for (var i = 1; i <= count; i++) {
+                var opt = document.createElement("option");
+                var sub = str.substring(0, str.indexOf(":"));
+                opt.setAttribute("id", str.substring(str.indexOf(":")+1,str.indexOf(",")));
+                str = str.substring(str.indexOf(",")+1);
+                opt.innerHTML = sub;
+                document.getElementById("groups").appendChild(opt);
+            }
+        }
+    };
+    xhttp.open("GET", "groups", true);
+    xhttp.send(null);
+}
+
 window.onload = loadList();
+window.onload = loadGroups();
 
 function loadFile(s) {
     var xhttp = new XMLHttpRequest();
@@ -37,6 +62,50 @@ function loadFile(s) {
     };
     xhttp.open("GET", "index.html?object=" + s[s.selectedIndex].id, true);
     xhttp.send(null);
+}
+
+function loadGroup(s) {
+    var msg;
+    var xhttp = new XMLHttpRequest();
+    document.getElementById("add").disabled = false;
+    document.getElementById("del").disabled = false;
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            msg = this.responseText;
+            msg = msg.substring(0, msg.indexOf("|"));
+            console.log("msg="+msg);
+            document.getElementById("grp_txt").innerHTML = msg;
+        }
+    };
+    xhttp.open("GET", "index.html?group=" + s[s.selectedIndex].id, true);
+    xhttp.send(null);
+
+    var node = document.getElementById("list");
+    while (node.firstChild) {
+        node.removeChild(node.firstChild);
+    }
+    var gr = document.getElementById("groups");
+    var xhttp1 = new XMLHttpRequest();
+    xhttp1.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            var count;
+            var str = this.responseText;
+            console.log("super"+str);
+            count = str.substring(0, str.indexOf(","));
+            str = str.substring(str.indexOf(",")+1);
+            console.log("count = " + count);
+            for (var i = 1; i <= count; i++) {
+                var opt = document.createElement("option");
+                var sub = str.substring(0, str.indexOf(":"));
+                opt.setAttribute("id", str.substring(str.indexOf(":")+1,str.indexOf(",")));
+                str = str.substring(str.indexOf(",")+1);
+                opt.innerHTML = sub;
+                document.getElementById("list").appendChild(opt);
+            }
+        }
+    };
+    xhttp1.open("GET", "objects?objs="+gr[gr.selectedIndex].id, true);
+    xhttp1.send();
 }
 
 function changeColor(s) {
@@ -65,36 +134,48 @@ function closeForm() {
     document.getElementById("hist").value = 2;
 }
 
+function closeFormGr() {
+    document.getElementById('id02').style.display='none';
+    var fields = document.getElementsByClassName("input");
+    for (var i = 0; i < fields.length; i++) {
+        fields[i].value = "";
+    }
+}
+
 function createObj() {
     
     document.getElementById('id01').style.display='none';
     var url = document.getElementById("url").value;
     var uname = document.getElementById("name").value;
-    var emails = document.getElementById("emails").value;
-    var cb = document.getElementsByClassName("st2");
-    var schedule = "";
-    for (var i = 0; i < cb.length; i++) {
-        schedule += cb[i].getElementsByClassName("plabel")[0].innerHTML + " "
-    }
-    schedule = schedule.substring(0, schedule.length - 1);
-    schedule += ", "
-    schedule += document.getElementById("time-selector").value;
+    //var emails = document.getElementById("emails").value;
+    //var cb = document.getElementsByClassName("st2");
+    //var schedule = "";
+    //for (var i = 0; i < cb.length; i++) {
+    //    schedule += cb[i].getElementsByClassName("plabel")[0].innerHTML + " "
+    //}
+    //schedule = schedule.substring(0, schedule.length - 1);
+    //schedule += ", "
+    //schedule += document.getElementById("time-selector").value;
     var hist = document.getElementById("hist").value;
     var fields = document.getElementsByClassName("input");
     for (var i = 0; i < fields.length; i++) {
         fields[i].value = "";
     }
-    var cboxes = document.getElementsByClassName("st2");
-    for (var i = cboxes.length-1; i >= 0; i--) {
-        cboxes[i].getElementsByTagName("input")[0].checked = false;
-        cboxes[i].style.backgroundColor="#BEBEBE";
-        cboxes[i].setAttribute("class", "st1");
-    }
+    //var cboxes = document.getElementsByClassName("st2");
+    //for (var i = cboxes.length-1; i >= 0; i--) {
+    //    cboxes[i].getElementsByTagName("input")[0].checked = false;
+    //    cboxes[i].style.backgroundColor="#BEBEBE";
+    //    cboxes[i].setAttribute("class", "st1");
+    //}
     document.getElementById("hist").value = 2;
     console.log("clear"); 
-    var xhttp = new XMLHttpRequest(); 
+    var t = document.getElementById("groups")
+    var group = t[t.selectedIndex].id
+    var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) { 
+        if (this.readyState == 4 && this.status == 200) {
+            var str = this.responseText;
+            /*
             var count = 0;
             var lst = document.getElementById("list");
             var flag = true;
@@ -107,29 +188,80 @@ function createObj() {
                     }
                 }
             }
+            */
             var opt = document.createElement("option");
-            opt.setAttribute("id", "object"+count);
+            opt.setAttribute("id", str);
             opt.innerHTML = uname;
             document.getElementById("list").appendChild(opt);
+            
         }
     };
-    xhttp.open("POST", "objects", true);
-    xhttp.send(url+"|"+uname+"|"+emails+"|"+schedule+"|"+hist);
+    xhttp.open("POST", "objects?append=" + group, true);
+    xhttp.send(url+"|"+uname+"|"+hist);
+
+    /*
+    var xhttp1 = new XMLHttpRequest(); 
+    xhttp1.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) { 
+            console.log(this.responseText);
+        }
+    };
+    xhttp1.open("POST", "append?append=" + group, true);
+    xhttp1.send("object"+count);
+    */
 }
+
+function createGr() {
+    
+    document.getElementById('id02').style.display='none';
+    var uname = document.getElementById("group_name").value;
+    var emails = document.getElementById("group_emails").value;
+    var fields = document.getElementsByClassName("input");
+    for (var i = 0; i < fields.length; i++) {
+        fields[i].value = "";
+    }
+    var xhttp = new XMLHttpRequest(); 
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) { 
+            var count = 0;
+            var lst = document.getElementById("groups");
+            var flag = true;
+            while (flag == true) {
+                count++;
+                flag = false;
+                for (var i = 0; i < lst.length; i++) {
+                    if ("group"+count == lst[i].id) {
+                        flag = true;
+                    }
+                }
+            }
+            var opt = document.createElement("option");
+            opt.setAttribute("id", "group"+count);
+            opt.innerHTML = uname;
+            document.getElementById("groups").appendChild(opt);
+        }
+    };
+    xhttp.open("POST", "groups", true);
+    xhttp.send(uname+"|"+emails+"|");
+}
+
 
 function delElem() {
     var opt = document.getElementById("list")[document.getElementById("list").selectedIndex];
+    var t = document.getElementById("groups")
     document.getElementById("list").removeChild(opt);
     document.getElementById("txt").innerHTML = "";
     var xhttp = new XMLHttpRequest(); 
-    /*
-    xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
+    xhttp.open("POST", "objects?del="+opt.id+"&mod="+t[t.selectedIndex].id, true);
+    xhttp.send(null);
+}
 
-        }
-    };
-    */
-    xhttp.open("POST", "objects?del="+opt.id, true);
+function delGroup() {
+    var opt = document.getElementById("groups")[document.getElementById("groups").selectedIndex];
+    document.getElementById("groups").removeChild(opt);
+    document.getElementById("grp_txt").innerHTML = "";
+    var xhttp = new XMLHttpRequest(); 
+    xhttp.open("POST", "groups?del="+opt.id, true);
     xhttp.send(null);
 }
 
@@ -141,18 +273,33 @@ function delElem() {
         <link rel="stylesheet" type="text/css" href="static/css/styleobj.css" />
     </head>
     <body>
-        <div id="demo">
-            <h2>Configuration</h2>
-            <div id="navig">
-                <div id="listd">
-                    <select id="list" onchange="loadFile(this)" multiple size="8">
-                    </select>
+        <div id="focus">
+            <div id="demo">
+                <h2>Configuration</h2>
+                <div id="grp">
+                    <h3>Groups</h3>
+                    <div id="listg">
+                        <select id="groups" onchange="loadGroup(this)" multiple size="8">
+                        </select>
+                    </div>
+                    <div id="grp_txt" rows="8" cols="45"></div>
+                    <div id="actionsgr">
+                        <button id="addgr" class="button" onclick="document.getElementById('id02').style.display='block'">Add</button>
+                        <button id="delgr" class="button" onclick="delGroup()">Del</button>
+                    </div>
                 </div>
-                <div id="txt" rows="8" cols="45"></div>
-            </div>
-            <div id="actions">
-                <button id="add" onclick="document.getElementById('id01').style.display='block'">Add</button>
-                <button id="del" onclick="delElem()">Del</button>
+                <div id="navig">
+                    <h3>Objects</h3>
+                    <div id="listd">
+                        <select id="list" onchange="loadFile(this)" multiple size="8">
+                        </select>
+                    </div>
+                    <div id="txt" rows="8" cols="45"></div>
+                </div>
+                <div id="actions">
+                    <button id="add" class="button" onclick="document.getElementById('id01').style.display='block'" disabled>Add</button>
+                    <button id="del" class="button" onclick="delElem()" disabled>Del</button>
+                </div>
             </div>
         </div>
         <div id="id01" class="modal">    
@@ -171,6 +318,7 @@ function delElem() {
                             <input id="name" class="input" placeholder="Page name" class="line">
                         </label>
                     </div>
+                    <!--
                     <div class="actDiv">
                         <label>
                             <div>Emails</div>
@@ -226,6 +374,7 @@ function delElem() {
                         </div>
                     </div> 
                     <br>
+                    -->
                     <div class="actDiv">
                         <div>History length</div>
                         <select id="hist">
@@ -252,17 +401,44 @@ function delElem() {
                 </div>
             </form>
         </div>
+        <div id="id02" class="modal">    
+            <form class="modal-content">
+                <div class="container">
+                    <h3>Add group</h3>
+                    <div class="actDiv">
+                        <label>
+                            <div>Group name</div>
+                            <input id="group_name" class="input" placeholder="Group name" class="line">
+                        </label>
+                    </div>  
+                    <div class="actDiv">
+                        <label>
+                            <div>Emails</div>
+                            <textarea id="group_emails" class="input" placeholder="example@example.com" class="emails"></textarea>
+                        </label>
+                    </div>
+                    <div class="clearfix">
+                        <button type="button" onclick="closeFormGr()" class="cancelbtn">Cancel</button>
+                        <button type="button" onclick="createGr()" class="createbtn">Create group</button>
+                    </div>
+                </div>
+                <div id="sp2">
+                    <span onclick="closeFormGr()" class="close" title="Close Modal">&times;</span>
+                </div>
+            </form>
+        </div>
     </body>
 <script>
-// Get the modal
-var modal = document.getElementById('id01');
+var modal1 = document.getElementById('id01');
+var modal2 = document.getElementById('id02');
 
-// When the user clicks anywhere outside of the modal, close it
 window.onclick = function(event) {
-    if (event.target == modal) {
+    if (event.target == modal1 || event.target == modal2) {
         closeForm();
+        closeFormGr();
     }
 }
+
 </script>
 
 </html>
