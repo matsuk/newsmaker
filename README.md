@@ -3,21 +3,21 @@ Newsmaker is a tool for automatic web pages changes search. It consists of a pro
 ## Getting started
 ### Download
 To download the project use:
-'''bash
+```bash
 git clone https://github.com/matsuk/newsmaker.git
-'''
+```
 ### Prerequisites
 Before using you should install all needed requirements:
-'''bash
+```bash
 cd newsmaker
 pip install -r requirements.txt
-'''
+```
 ### Configuring
 Then, the program should be configured via web interface:
-'''bash
+```bash
 cd configure
 python3 control.py
-'''
+```
 Go to your browser and open localhost:5000 (by default).
 First, the group must be created. E-mails is a list of addresses where the results will be sent.
 Second, pages must be added for each group. Specify URLs, name and amount of copies of each page to store.
@@ -26,8 +26,8 @@ Also, you should specify your e-mail in configure/mail file to send notification
 
 ## Run
 Now the program is ready to run:
-'''bash
+```bash
 cd ..
 python3 newsmaker.py
-'''
+```
 
