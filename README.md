@@ -10,7 +10,7 @@ git clone https://github.com/matsuk/newsmaker.git
 Before using you should install all needed requirements:
 ```bash
 cd newsmaker
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 ### Configuring
 Then, the program should be configured via web interface:

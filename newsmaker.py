@@ -4,7 +4,6 @@ import re
 import requests
 import copy
 from urllib.request import urlopen, Request
-from readability import Document
 from bs4 import BeautifulSoup
 import urllib
 import difflib
@@ -419,6 +418,9 @@ class Newsmaker:
         except SMTPException as e:
             print("Authentication failed")
             return 3
+        except:
+            print('Authentication failed')
+            return 3
 
     def sendNotifications(self, group):
         subject = 'Отслеживание обновлений'
@@ -455,6 +457,8 @@ class Newsmaker:
         except SMTPAuthenticationError as e:
             print('Incorrect username/password combination')
         except SMTPException as e:
+            print('Authentication failed')
+        except:
             print('Authentication failed')
         if success:
             try:
