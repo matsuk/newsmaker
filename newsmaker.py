@@ -8,12 +8,19 @@ from readability import Document
 from bs4 import BeautifulSoup
 import urllib
 import difflib
-import datetime
 import smtplib
+from smtplib import SMTPHeloError, SMTPAuthenticationError, SMTPException
 import getpass
+import base64
+import time
+import sys
+from datetime import timedelta, datetime
 
 
 def sortDate(x):
+    """
+    Key for sorting dates represented as strings.
+    """
     date = x.split('.')[0].split('-')
     if len(date[1]) == 1:
         date[1] = '0' + date[1][0]
@@ -35,162 +42,20 @@ def checkEqual(iterator):
         return True
     return all(first == rest for rest in iterator)
 
-def texts_old(bs):
-    return list(filter(lambda x: any([len(x1) > 80 for x1 in filter(lambda x2: x2.__class__.__name__ == 'NavigableString', 
-                                                              x.contents)]), bs.findAll(['p', 'div'])))
 def texts(bs):
     return list(filter(lambda x: len(''.join(list(filter(lambda x2: x2.__class__.__name__ == 'NavigableString', 
-                                                              x.contents)))) > 80, bs.findAll(['p', 'div'])))
+                                                         x.contents)))) > 80, bs.findAll(['p', 'div'])))
 def textSize(tag):
     return len(''.join(list(filter(lambda x2: x2.__class__.__name__ == 'NavigableString', tag.contents))))
 
 def most_common(lst):
     return max(lst, key=lst.count)
 
-def urlNorm(url):
-    url = urllib.parse.urlsplit(url)
-    print(url)
-    print(type(url))
-    url = list(url)
-    url[2] = urllib.parse.quote(url[2])
-    url = urllib.parse.urlunsplit(url)
-    print(url)
-    return url               
-                
-def compareStr(str1, str2):
-    list1 = str1.splitlines()
-    list2 = str2.splitlines()
-    count = 0
-    for i in range(min(len(list1), len(list2))):
-        if list1[i] != list2[i]:
-            print("line ", i, ":\n    ", list1[i], "\n    ", list2[i], sep='')
-            count += 1
-    print(count, "discrepancies")
-    
-def delSpaces(list):
-    buf = 'a'
-    for i in range(len(list)):
-        buf1 = list[i]
-        if list[i] == buf and list[i] == '':
-            del list[i]
-        buf = buf1
-    return list
-
-def savehtml(html, name='page'):
-    num = 0
-    while name+str(num)+'.html' in os.listdir():
-        num += 1
-    file = open(name+str(num)+'.html', "w")
-    file.write(code)
-
-
-        
-def tagToLines(tag, textOnly=True):
-    if textOnly == True:
-        s = tag.get_text().__str__()
-        s = s.splitlines()
-        s = delSpaces(s)
-    else:
-        s = tag.__str__()
-        s = s.splitlines()
-    return s
-    
-def walkChildren(node):
-    for child in node.children:
-        if child.name == None:
-            continue
-        try:
-            print(child.name)
-            if child.name != "br" and child.name != "p":
-                tag = walkChildren(child)
-                return child.name+"->"+tag
-            else:
-                return child.name
-        except Exception:
-            continue
-        
-# coding: utf-8
-def saveTableCmp(table, table1, name="tables/table"):
-    t = csv.reader(open('tables/table1.csv', 'r'))
-    num = 0
-    while os.path.basename(name)+num.__str__()+'.csv' in os.listdir('tables'):
-        num += 1
-    csvFile = open(name+num.__str__()+'.csv', 'w')
-    writer = csv.writer(csvFile)
-    try:
-        rows = table.findAll("tr")
-        for row in rows:
-            csvRow = []
-            for cell in row.findAll(['td', 'th']):
-                if cell.img != None:
-                    value = cell.img.attrs['src']
-                else:
-                    value = cell.get_text()
-                if value.startswith('\n'):
-                    value = value[1:]
-                if value.endswith('\n'):
-                    value = value[:len(value)-1]
-                value = value.replace('\n', ' ')
-                csvRow.append(value)
-            writer.writerow(csvRow)
-    finally:
-        csvFile.close()
-        
-def saveTable(table, name="tables/table"):
-    num = 0
-    while os.path.basename(name)+num.__str__()+'.csv' in os.listdir('tables'):
-        num += 1
-    csvFile = open(name+num.__str__()+'.csv', 'w')
-    writer = csv.writer(csvFile)
-    try:
-        rows = table.findAll("tr")
-        for row in rows:
-            csvRow = []
-            for cell in row.findAll(['td', 'th']):
-                if cell.img != None:
-                    value = cell.img.attrs['src']
-                else:
-                    value = cell.get_text()
-                if value.startswith('\n'):
-                    value = value[1:]
-                if value.endswith('\n'):
-                    value = value[:len(value)-1]
-                value = value.replace('\n', ' ')
-                csvRow.append(value)
-            writer.writerow(csvRow)
-            print(csvRow)
-    finally:
-        csvFile.close()
-        
-def diff(text1, text2):
-    d = difflib.Differ()
-    result = list(d.compare(text1, text2))
-    i = 0
-    for line in result:
-        i += 1
-        if line[0] != ' ' and line[0] != '?':
-            print(i,':', line)
-            i -= 1
-            
-def isText(tag):
-    l = set()    
-    for child in tag.children:
-        if child.name != None:
-            l.add(child.name)
-        try:
-            for subchild in child.children:
-                if subchild.name != None:
-                    l.add(subchild.name)
-        except:
-            print("Tag has no children!")
-    if (('br' in l) or ('hr' in l) or ('p' in l)) and (('h1' in l) or ('h2' in l) or ('h3' in l) or ('h4' in l) or ('h5' in l) or ('h6' in l)):
-        print("Looks like a text:")
-        print(tag.get_text())
-        return True
-    else:
-        print("Probably not a text:")
-        print(tag.get_text())
-        return False
+def getSize(filename):
+    f = open(filename)
+    f.seek(0, 2)
+    size = f.tell()
+    return size
 
 def preprocessText(text):
     words = []
@@ -231,78 +96,15 @@ def preprocessText(text):
         words.append(word)
     return words
 
-def diffB(text1, text2):
-    text = ''
-    brackets = []
-    d = difflib.Differ()
-    result = list(d.compare(text1, text2))
-    i = 0
-    line = ''
-    sign = ' '
-    rem = 0
-    add = 0
-    #print(len(list(filter(lambda x: x == '<', [x1[2] for x1 in result]))))
-    #print(len(list(filter(lambda x: x == '>', [x1[2] for x1 in result]))))
-    for char in result:
-        if char[2] == '<':
-            text += char[2]
-            brackets.append('<')
-            continue
-        if char[2] == '>':
-            text += char[2]
-            if len(brackets) > 0:
-                brackets.pop()
-            continue
-        if len(brackets) != 0:
-            text += char[2]
-            continue
-        if sign == ' ':
-            if char[0] == ' ':
-                text += char[2]
-            elif char[0] == '+':
-                add += 1
-                text += "<span style=\"background-color: #B4EBA2\" title=\"Added text\" class=\"newsmaker1\">"
-                text += char[2]
-                sign = '+'
-            elif char[0] == '-':
-                rem += 1
-                text += "<span style=\"background-color: #EBA2A9\" title=\"Deleted text\" class=\"newsmaker2\">"
-                text += char[2]
-                sign = '-'
-        elif sign == '+':
-            if char[0] == ' ':
-                text += "</span>"
-                text += char[2]
-                sign = ' '
-            elif char[0] == '+':
-                text += char[2]
-            elif char[0] == '-':
-                text += "</span>"
-                rem += 1
-                text += "<span style=\"background-color: #EBA2A9\" title=\"Deleted text\" class=\"newsmaker2\">"
-                text += char[2]
-                sign = '-'
-        elif sign == '-':
-            if char[0] == ' ':
-                text += "</span>"
-                text += char[2]
-                sign = ' '
-            elif char[0] == '+':
-                text += "</span>"
-                add += 1
-                text += "<span style=\"background-color: #B4EBA2\" title=\"Added text\" class=\"newsmaker1\">"
-                text += char[2]
-                sign = '+'
-            elif char[0] == '-':
-                text += char[2]
-    return text, (rem, add)
-
-def diffA(text1, text2):
+def getDiff(text1, text2):
+    """
+    Returns HTML with highlighted differnces between text1 and text2,
+    also provides amount of added/removed elements.
+    """
     text1 = preprocessText(text1)
     text2 = preprocessText(text2)
     text = ''
     d = difflib.Differ()
-    #result = list(d.compare(text1, text2))
     result  = list(difflib.ndiff(text1, text2))
     i = 0
     line = ''
@@ -352,7 +154,11 @@ def diffA(text1, text2):
     return text, (rem, add)
 
 
-def savetag(tag, name='tag', overwrite=False):
+def saveTag(tag, name='tag', overwrite=False):
+    """
+    Saves BeautifulSoup tag as <name><num>.html if <overwrite> is False
+    and <name>.html if <overwrite> is True.
+    """
     if overwrite == False:
         num = 0
         while name+num.__str__()+'.html' in os.listdir():
@@ -363,52 +169,10 @@ def savetag(tag, name='tag', overwrite=False):
         file = open(name, "w")
         file.write(tag.__str__().replace('\r', '\n'))
     
-def diffL(text1, text2):
-    d = difflib.Differ()
-    result = list(d.compare(text1, text2))
-    i = 0
-    for letter in result:
-        i += 1
-        if letter[0] != ' ' and letter[0] != '?':
-            print(i,':', letter)
-            i -= 1
-
-def checkNews(config='config'):
-    for line in open(config, 'r').readlines():
-        name = (urllib.parse.urlparse(line).netloc+urllib.parse.urlparse(line).path).replace('.', '_').replace('/', '-').replace('\n', '')
-        if not os.path.exists(name):
-            os.makedirs(name)
-            print("Directory created: ", name, sep='')
-        lst = os.listdir(name)
-        lst.sort()
-        now = datetime.datetime.now()
-        now = now.year.__str__()+'-'+now.month.__str__()+'-'+now.day.__str__()+'-'+now.hour.__str__()+'-'+now.minute.__str__()+'-'+now.second.__str__()
-        if len(lst) < 5:
-            if len(lst) != 0:
-                try:
-                    checkPage(line, name+'/'+lst[len(lst)-1], name+'/'+now+'.html')
-                except Exception as err:
-                    print(err)
-                    print("Can't check!")
-                    continue
-            else:
-                try:
-                    checkPage(line, 'temp', name+'/'+now+'.html')
-                except Exception as err:
-                    print(err)
-                    print("Can't check!")
-                    continue
-        else:
-            os.remove(name+'/'+lst[0])
-            try:
-                checkPage(line, name+'/'+lst[len(lst)-1]+'.html', name+'/'+now+'.html')
-            except Exception as err:
-                print(err)
-                print("Can't check!")
-                continue
-        print("Page saved as ", name+now, sep='')
-        
 def findText(bs):
+    """
+    Simple text searcher, based on looking for headers, newline tags and paragraph tags.
+    """
     par = set()
     l = []
     for tag in bs.findAll({'p', 'br', 'hr', re.compile("h[1-6]")}):
@@ -428,6 +192,14 @@ def findText(bs):
     return l[_i][0]
 
 def findTextNew(bs, bg_texts=5, main_to_bg_ratio=3.5, brfs_to_junk_ratio = 2.5, get_class=False):
+    """
+    Heuristic text searcher, which provides text types.
+        "briefs": for pages containing series of nearly same-sized blocks.
+        "article": for pages with a specific tag, which contains much more text than any other.
+        "article_with_comments": there is a major block and a set of minor blocks.
+        "unsolved": couldn't decide which type the text belongs to.
+        "notext": the page doesn't contain text blocks.
+    """
     page_class = None
     articles = bs.findAll('article')
     if len(articles) > 1:
@@ -500,10 +272,7 @@ def checkPage(url, prev="prev.html", new="prev.html", spec=None, attrs=None):
     add = 0
     if spec == None and attrs != None:
         print('\'tag\' is None, but attrs is not: checking the whole page')
-    bs1 = cookSoup1(url)
-    #print("prev = ", prev, sep='')
-    #print("new = ", new, sep='')
-    #print(os.path.isfile(prev))
+    bs1 = cookSoup(url)
     if os.path.isfile(prev):
         bs2 = BeautifulSoup(open(prev, "r").read(), "lxml")
         for tag in bs2.findAll("span", attrs={'class':'newsmaker1'}):
@@ -523,76 +292,47 @@ def checkPage(url, prev="prev.html", new="prev.html", spec=None, attrs=None):
                 tag2 = bs2.find(spec, attrs)
         text1 = tag1.__str__().replace('\r', '\n')
         text2 = tag2.__str__().replace('\r', '\n')
-        text, (rem, add) = diffA(text2, text1)
+        text, (rem, add) = getDiff(text2, text1)
         newtag = BeautifulSoup(text, "lxml")
         newtag = newtag.contents[0].contents[0].contents[0]
         searcher(bs1).replaceWith(newtag)
-    savetag(bs1, new, True)
+    saveTag(bs1, new, True)
     return rem, add
 
 def urlNorm(url):
+    """
+    Fix encoding issues, appearing in URLs
+    
+    Parameters
+    ----------
+    url: string
+        Input URL to normalize
+
+    Returns
+    -------
+    out: string
+        Normalized URL
+    """
     url = urllib.parse.urlsplit(url)
     url = list(url)
     url[2] = urllib.parse.quote(url[2])
     url = urllib.parse.urlunsplit(url)
     return url
 
-def cookSoup1(url):
-    url = urlNorm(url)
-    i = 0
-    while i<3:
-        try:
-            req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            html = urlopen(req)
-        except Exception as err:
-            print(err)
-            i += 1
-            continue
-        code = html.read()
-        try:
-            code = code.decode(encoding='utf-8')
-        except UnicodeDecodeError as err:
-            print(err)
-            print('Trying \'cp1251\'...', sep='')
-            try:
-                code = code.decode(encoding='cp1251')
-            except UnicodeDecodeError as err:
-                print(err)
-                return None
-        #print('Success!')
-        bs = BeautifulSoup(code, "lxml")
-        return bs
-    print("Can't load page "+url)
-    return None
-
 def cookSoup(url):
-    url = urlNorm(url)
-    i = 0
-    while i<3:
-        try:
-            html = urlopen(url)
-        except Exception as err:
-            print(err)
-            i += 1
-            continue
-        code = html.read()
-        try:
-            code = code.decode(encoding='utf-8')
-        except UnicodeDecodeError as err:
-            print(err)
-            print('Trying \'cp1251\'...', sep='')
-            try:
-                code = code.decode(encoding='cp1251')
-            except UnicodeDecodeError as err:
-                print(err)
-                return None
-        #print('Success!')
-        bs = BeautifulSoup(code, "lxml")
-        return bs
-    print("Can't load page "+url)
-    return None
+    """
+    Download HTML page and parse with BeatifulSoup
 
-def cookSoup1(url):
+    Parameters
+    ----------
+    url: string
+        Page URL
+
+    Returns
+    -------
+    out: BeatifulSoup object
+        Parsed HTML tree
+    """
     url = urlNorm(url)
     i = 0
     while i<3:
@@ -621,9 +361,117 @@ def cookSoup1(url):
     return None
 
 class Newsmaker:
+    """
+    Newsmaker is a main class to download and store pages and compare their versions,
+    also provides tool to send notifications to receivers specified via web interface.
+    
+    Constructor initializes sender e-mail info and groups of receivers with corresponding 
+    lists of pages.
+
+    Groups first should be created via web interface (./configure/control.py), e-mail and
+    SMTP server should be placed in ./configure/mail file. If SMTP is not specified it
+    will be taken as "smtp.<e-mail server>". 
+
+    Methods
+    -------
+    __init__(config)
+        Intializes all needed info from ./<config> directory and asks for password, which
+        will be stored in ./<config>/<pswd_file> in base64 encoding for Newsmaker.store_pass days.
+
+    start()
+        Checks changes in provided pages and saves them as HTMLs with highlighted elements.
+
+    checkSMTP()
+        Check SMTP connection with provided e-mail and password.
+
+    sendNotifications(group)
+        Send e-mails with changes info to receivers.
+
+    enterPass(pswd_file)
+        Asks for password and stores it in pswd_file in base64 encoding.
+
+    test()
+        Saves HTML code of pages with highlighted main text.
+
+    Example
+    -------
+    >>> newsmaker = Newsmaker()
+    >>> newsmaker.store_pass = 5
+    >>> newsmaker.start()
+
+    """
+    tryNum = 0
+    store_pass = 3
+    def checkSMTP(self):
+        try:
+            server = smtplib.SMTP_SSL(self.host, 465)
+            server.ehlo(self.addr)
+            server.login(self.addr, self.pswd)
+            server.quit()
+            return 0
+        except SMTPHeloError as e:
+            print("Server did not reply")
+            return 1
+        except SMTPAuthenticationError as e:
+            print("Incorrect username/password combination")
+            self.tryNum += 1
+            return 2
+        except SMTPException as e:
+            print("Authentication failed")
+            return 3
+
+    def sendNotifications(self, group):
+        subject = 'Отслеживание обновлений'
+        body_text = 'Сводка:\n'
+        for i in range(len(group.pages)):
+            rem = group.pages[i].data[0]
+            add = group.pages[i].data[1]
+            if rem == None and add == None:
+                continue
+            body_text += str(i+1) + ') '
+            body_text += group.pages[i].name + '\n'
+            if add == 0 and rem == 0:
+                body_text += 'Изменений нет\n'
+            else:
+                body_text += 'Новых элементов: ' + str(add) + '\n'
+                body_text += 'Удалено элементов: ' + str(rem) + '\n'
+                body_text += 'Посмотрите изменения по адресу: ' + group.pages[i].url + '\n'
+            body_text += '\n'
+        BODY = "\r\n".join((
+            "From: {}".format("Newsmaker"),
+            "To: %s" % ', '.join(group.emails),
+            "Subject: %s" % subject ,
+            "",
+            body_text
+        ))
+        success = False
+        try:
+            server = smtplib.SMTP_SSL(self.host, 465)
+            server.ehlo(self.addr)
+            server.login(self.addr, self.pswd)
+            success = True
+        except SMTPHeloError as e:
+            print('Server did not reply')
+        except SMTPAuthenticationError as e:
+            print('Incorrect username/password combination')
+        except SMTPException as e:
+            print('Authentication failed')
+        if success:
+            try:
+                server.sendmail(self.addr, group.emails, BODY.encode('utf-8'))
+            except SMTPException as e:
+                print('Error: unable to send email', e)
+            finally:
+                server.quit()
+
+    def enterPass(self, pswd_file):
+        self.pswd = getpass.getpass()
+        encoded_pswd = base64.b64encode(self.pswd.encode())
+        open(pswd_file, 'w+').write(encoded_pswd.decode())
+
     def __init__(self, config='configure'):
-        dir_objs = config+'/objects'
-        dir_grps = config+'/groups'
+        dir_objs = os.path.join(config, 'objects')
+        dir_grps = os.path.join(config, 'groups')
         grps = []
         for name in [x for x in os.listdir(dir_grps) if x.startswith('group')]:
             objs = []
@@ -637,40 +485,70 @@ class Newsmaker:
             grp = Group(lst[0], lst[1].split('\n'), objs)
             grps.append(grp)
         self.grps = grps
-        f1 = open(config+'/mail').read().split('\n')
-        self.addr = f1[0]
-        self.pswd = f1[1]
-        self.host = f1[2]
+        mail_info = open(os.path.join(config, 'mail')).read().split('\n')
+        self.addr = mail_info[0]
+        if len(mail_info) > 1:
+            self.host = mail_info[1]
+        else:
+            # Try to use smtp server as smtp.<domain_name>
+            self.host = 'smtp.' + self.addr.split('@')[1]
+        pswd_file = os.path.join(config, 'pswd')
+        if os.path.isfile(pswd_file) and getSize(pswd_file) > 0:
+            pswd_mod = datetime.fromtimestamp(os.path.getmtime(filename=pswd_file))
+            present = datetime.now()
+            delta = timedelta(days=self.store_pass)
+            if present - delta > pswd_mod:
+                # Re-enter password if expired
+                self.enterPass(pswd_file)
+            else:
+                self.pswd = base64.b64decode(open(pswd_file).read()).decode()
+        else:
+            self.enterPass(pswd_file)
+        code = self.checkSMTP()
+        while code == 2 and self.tryNum < 3:
+            self.enterPass(pswd_file)
+            code = self.checkSMTP()
+        if self.tryNum == 3 or code != 0:
+            sys.exit(0)
+
     def __repr__(self):
-        return "meow"
-    def addUrl(self, url, emails=None, schedule=None, historyLength=None, name=None):
-        if type(url) == str:
-            temp = Page(url, emails, schedule, historyLength, name)
-        elif type(url) == Page:
-            temp = url
-        self.urlList.append(temp)
+        return self.grps
+
     def start(self, name=None, group_name=None):
         if name == None or group_name == None:
             for gr in self.grps:
-                for i in range(len(gr.pages)):
-                    print(gr.pages[i].url)
-                    gr.pages[i].data = checkNewsObj(gr.pages[i])
+                for page in gr.pages:
+                    print(page.url)
+                    page.checkNews()
                 if len(gr.emails) != 0:
-                    sendNotifications(self.host, self.addr, gr, self.pswd)
+                    self.sendNotifications(gr)
         else:
             for gr in self.grps:
                 if gr.name == group_name:
                     for page in gr.pages:
                         if page.name == name:
-                            trash = checkNewsObj(page)
+                            trash = page.checkNews()
     def test(self):
         for gr in self.grps:
             for page in gr.pages:
                 print(page.url)
-                bs = cookSoup1(page.url)
-                saveHighlightedText1(bs)
+                page.saveHighlightedText()
         
-class Page:            
+class Page:
+    """
+    Class to operate with single page.
+
+    Methods
+    -------
+    __init__(url, name=None, historyLength=5)
+        Creates page object for specified URL. If name is not provided the URL will be 
+        used as the name.
+
+    checkNews()
+        Check news for the page according to stored history. If no history is found, the page 
+        will be simply saved.
+
+    """
     def __init__(self, url, name=None, historyLength=5, **kwargs):
         self.url = url
         self.historyLength = historyLength
@@ -687,7 +565,71 @@ class Page:
         s += 'History length: '+str(self.historyLength)+'\n'
         return s
 
+    def checkNews(self):
+        rem = None
+        add = None
+        if self != None and self.__class__.__name__ == 'Page':
+            if self.url == self.name:
+                name = (urllib.parse.urlparse(self.name).netloc+urllib.parse.urlparse(self.name).path).replace('.', '_').replace('/', '-').replace('\n', '')
+            else:
+                name = self.name
+            if not os.path.exists(name):
+                os.makedirs(name)
+                print("Directory created: ", name, sep='')
+            lst = os.listdir(name)
+            lst = [x for x in os.listdir(name) if x.endswith('html')]
+            lst.sort(key=sortDate)
+            now = datetime.now()
+            now = now.year.__str__()+'-'+now.month.__str__()+'-'+now.day.__str__()+'-'+now.hour.__str__()+'-'+now.minute.__str__()+'-'+now.second.__str__()
+            if len(lst) < self.historyLength:
+                if len(lst) != 0:
+                    rem, add = checkPage(self.url, name+'/'+lst[len(lst)-1], name+'/'+now+'.html', self.tag, self.attrs)
+                else:
+                    bs = cookSoup(self.url)
+                    saveTag(bs, name+'/'+now+'.html', True)
+            else:
+                os.remove(name+'/'+lst[0])
+                print("Old file "+name+'/'+lst[0]+" removed")
+                rem, add = checkPage(self.url, name+'/'+lst[len(lst)-1]+'.html', name+'/'+now+'.html', self.tag, self.attrs)
+            print("Page saved as ", name+'/'+now, sep='')
+            if rem == 0 and add == 0:
+                print("No changes!")
+            elif rem == None and add == None:
+                print("No history for page")
+            else:
+                print("Added: ",add," lines\nRemoved: ",rem," lines", sep='')
+            self.data = (rem, add)
+        else:
+            print('invalid arg')
+
+    def saveHighlightedText(self, name='taghl'):
+        bs = cookSoup(self.url)
+        searcher = findTextNew
+        text = searcher(bs)
+        if text != None:
+            newtag = BeautifulSoup(text.__str__(), 'lxml').contents[0].contents[0].contents[0]
+            span = bs.new_tag('div', **{'class':'newsmaker3', 'style':'background-color: #FFFD86'})
+            span.append(newtag)
+            text.replaceWith(span)
+            saveTag(bs, name=name)
+        else:
+            print('No text was found')
+
 class Group:
+    """
+    Group class. Stores lists of e-mails and pages for current group.
+
+    Methods
+    -------
+    __init__(name, emails, pages)
+        Constructor.
+        name: string
+            Name of the group.
+        emails: list of strings
+            Recipients' e-mail addresses
+        pages: list of Page-objects
+            List of pages to check.
+    """
     def __init__(self, name, emails=[], pages=[]):
         self.name = name
         self.emails = emails
@@ -696,81 +638,6 @@ class Group:
         self.pages = pages
     def __repr__(self):
         return self.name
-        
-def checkNewsObj(page):
-    rem = None
-    add = None
-    if page != None and page.__class__.__name__ == 'Page':
-        if page.url == page.name:
-            name = (urllib.parse.urlparse(page.name).netloc+urllib.parse.urlparse(page.name).path).replace('.', '_').replace('/', '-').replace('\n', '')
-        else:
-            name = page.name
-        if not os.path.exists(name):
-            os.makedirs(name)
-            print("Directory created: ", name, sep='')
-        lst = os.listdir(name)
-        lst = [x for x in os.listdir(name) if x.endswith('html')]
-        lst.sort(key=sortDate)
-        now = datetime.datetime.now()
-        now = now.year.__str__()+'-'+now.month.__str__()+'-'+now.day.__str__()+'-'+now.hour.__str__()+'-'+now.minute.__str__()+'-'+now.second.__str__()
-        if len(lst) < page.historyLength:
-            if len(lst) != 0:
-                rem, add = checkPage(page.url, name+'/'+lst[len(lst)-1], name+'/'+now+'.html', page.tag, page.attrs)
-            else:
-                bs = cookSoup1(page.url)
-                savetag(bs, name+'/'+now+'.html', True)
-                #try:
-                #    rem, add = checkPage(page.url, 'temp', name+'/'+now+'.html', page.tag, page.attrs)
-                #except Exception as err:
-                #    print(err)
-                #    print("Can't check!")
-                #    return None
-        else:
-            os.remove(name+'/'+lst[0])
-            print("Old file "+name+'/'+lst[0]+" removed")
-            rem, add = checkPage(page.url, name+'/'+lst[len(lst)-1]+'.html', name+'/'+now+'.html', page.tag, page.attrs)
-        print("Page saved as ", name+'/'+now, sep='')
-        if rem == 0 and add == 0:
-            print("No changes!")
-        elif rem == None and add == None:
-            print("No history for page")
-        else:
-            print("Added: ",add," lines\nRemoved: ",rem," lines", sep='')
-        return rem, add
-    else:
-        print('invalid arg')
-
-def loadObjects(directory="configure/objects"):
-    directory = os.path.normpath(directory)
-    objs = []
-    for name in [x for x in os.listdir(directory) if x.startswith('object')]:
-        f = open(directory+"/"+name, 'r').read()
-        lst = f.split('|')
-        obj = Page(lst[0], lst[1], lst[2].split('\n'), lst[3], int(lst[4]))
-        objs.append(obj)
-    return objs
-
-def saveHighlightedText(bs, name='taghl'):
-    searcher = findTextNew
-    text = searcher(bs)
-    if text != None:
-        newtag = BeautifulSoup(text.__str__(), 'lxml').contents[0].contents[0].contents[0]
-        span = bs.new_tag('div', **{'class':'newsmaker3', 'style':'background-color: #FFFD86'})
-        span.append(newtag)
-        text.replaceWith(span)
-        savetag(bs, name=name)
-    else:
-        print('No text was found')
-
-def saveHighlightedText1(bs, name='taghl'):
-    searcher = findTextNew
-    text = searcher(bs)
-    if text != None:
-        for tag in text.findAll(['div', 'p', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            tag.attrs['style']='background-color: #FFFD86'
-        savetag(bs, name=name)
-    else:
-        print('No text was found')
 
 def findDeepestTag(bs, tag=None, depth=0):
     if bs.name == tag or tag == None:
@@ -800,6 +667,7 @@ def getDeepestTags(bs, tag=None, depth=0, max_depth=0):
         if child.name != None:
             tags.extend(getDeepestTags(child, tag, depth+1, max_depth))
     return tags
+
 def maxDepth(bs, depth=0):
     count = 0
     max_depth = depth
@@ -810,6 +678,7 @@ def maxDepth(bs, depth=0):
             if child_depth > max_depth:
                 max_depth = child_depth
     return max_depth
+
 def allTagsNum(bs):
     count = 0
     for child in bs.children:
@@ -817,6 +686,7 @@ def allTagsNum(bs):
             count += 1
             count += allTagsNum(child)
     return count
+
 def printDeepestTags(bs, tag=None, depth=0, max_depth=0):
     if depth == 0:
         max_depth = maxTagDepth(bs, tag)
@@ -849,69 +719,6 @@ def getWords(bs):
 
 def getWordsInLinks(bs):
     return [x for y in [x.split(' ') for x in getParagraphsInLinks(bs)] for x in y] 
-
-def delScripts(tag):
-    for child in tag.findChildren():
-        if child.name == 'script':
-            child.replaceWith('')
-            continue
-        elif bool(child.findChildren()):
-            delScripts(child)
-
-def send_email(host, subject, to_addr, from_addr, body_text):
-    BODY = "\r\n".join((
-        "From: %s" % from_addr,
-        "To: %s" % to_addr,
-        "Subject: %s" % subject ,
-        "",
-        body_text
-    ))
- 
-    server = smtplib.SMTP_SSL(host, 465)
-    server.ehlo(from_addr)
-    server.login(from_addr,'1410Vfwer1997')
-    server.sendmail(from_addr, [to_addr], BODY)
-    server.quit()
-
-def sendNotifications(host, from_addr, group, pswd):
-    subject = 'Отслеживание обновлений'
-    body_text = 'Сводка:\n'
-    for i in range(len(group.pages)):
-        rem = group.pages[i].data[0]
-        add = group.pages[i].data[1]
-        if rem == None and add == None:
-            continue
-        body_text += str(i+1) + ') '
-        body_text += group.pages[i].name + '\n'
-        if add == 0 and rem == 0:
-            body_text += 'Изменений нет\n'
-        else:
-            body_text += 'Новых элементов: ' + str(add) + '\n'
-            body_text += 'Удалено элементов: ' + str(rem) + '\n'
-            body_text += 'Посмотрите изменения по адресу: ' + group.pages[i].url + '\n'
-        body_text += '\n'
-    BODY = "\r\n".join((
-        "From: %s" % from_addr,
-        "To: %s" % ', '.join(group.emails),
-        "Subject: %s" % subject ,
-        "",
-        body_text
-    ))
-    server = smtplib.SMTP_SSL(host, 465)
-    server.ehlo(from_addr)
-    server.login(from_addr, pswd)
-    server.sendmail(from_addr, group.emails, BODY.encode('utf-8'))
-    server.quit()
-
-def saveHighlightedText(bs):
-    searcher = findTextNew
-    text = searcher(bs)
-    newtag = BeautifulSoup(text.__str__(), 'lxml').contents[0].contents[0].contents[0]
-    span = bs.new_tag('div', **{'class':'newsmaker3', 'style':'background-color: #FFFD86'})
-    span.append(newtag)
-    text.replaceWith(span)
-    savetag(bs, name='taghl')
-
 
 if __name__ == "__main__":
     news = Newsmaker()
